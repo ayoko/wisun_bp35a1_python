@@ -127,7 +127,8 @@ class WiSUN:
         self.pan_id = None
         self.verbose = verbose
 
-        self.tty = serial.Serial(ttyname, rate_bps)
+        # timeout as 1 second looks good enough
+        self.tty = serial.Serial(ttyname, rate_bps, timeout=1)
 
         if logname:
             self.logfile = open(logname, 'a')
