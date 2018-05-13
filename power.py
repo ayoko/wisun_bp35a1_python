@@ -36,12 +36,11 @@ HIDE_ADDR = False
 
 DEBUG = False
 
-def main():
-    import time
+def init():
     from wisun import WiSUN
 
     w = WiSUN(ttyname=TTY, rate_bps=115200, auth_id=B_ROUTE_AUTH_ID,
-              auth_pw=B_ROUTE_AUTH_PASSWD, verbose=True, debug=False,
+              auth_pw=B_ROUTE_AUTH_PASSWD, verbose=True, debug=True,
               hide_addr=HIDE_ADDR, logname="log.txt")
 
     if w.read_from_cachefile():
@@ -55,16 +54,36 @@ def main():
         w.scan(retry=-1)
         w.connect()
 
+    return w
+
+def main():
+    import os
+    import sys
+    import time
+    from wisun import WiSUN
+
+    w = init()
+
+    ct_noreply = 0
     tid = 0
     while True:
         w.echonet_send(tid, WiSUN.ESV_Get, WiSUN.EPC_SHUNJI_DENRYOKU)
         s = w.echonet_recv(tid, WiSUN.ESV_Reply, WiSUN.EPC_SHUNJI_DENRYOKU)
         if s:
+            ct_noreply = 0
             power = s[-8:]
             print "%s: Power = %d [W]" % (time.strftime("%Y/%m/%d %H:%M:%S"),
                                           int(power, 16))
+            sys.stdout.flush()
+            os.system("rrdtool update $HOME/wisun/db/wisun_2.rrd N:%f" % \
+                      int(power, 16))
+            time.sleep(1)
         else:
             print "No reply"
+            ct_noreply += 1
+            if ct_noreply >= 10:
+                w = init()
+                ct_noreply = 0
 
         tid += 1
         if (tid > 0xffff):

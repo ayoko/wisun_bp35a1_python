@@ -133,11 +133,12 @@ class WiSUN:
         if logname:
             self.logfile = open(logname, 'a')
 
-        self._cmd("SKRESET")
-        self._expect(r'OK')
-
-        time.sleep(0.1)             # Fail safe (may not be required)
         while True:
+            self._diag('Issuing SKRESET')
+            self._cmd("SKRESET")
+            self._expect(r'OK')
+            time.sleep(0.1)         # Fail safe (may not be required)
+
             self._diag('Issuing ROPT')
             self._cmd("ROPT")
             self._expect(r'ROPT')
@@ -303,13 +304,14 @@ class WiSUN:
         self.tty.write(body)
         self.tty.write('\r')
     
-    def echonet_recv(self, tid, esv, epc):
+    def echonet_recv(self, tid, esv, epc, timeout=5):
         """
         Receive a message in Echonet protocol format
 
         tid -- Transaction ID
         esv -- Echonet Service Code
         epc -- Echonet Property Code
+        timeout -- timeout (seconds)
         """
         import re
         if self.dest_ip == None:
@@ -322,7 +324,7 @@ class WiSUN:
                  (self.dest_ip, self.my_ip, WiSUN.UDP_PORT, WiSUN.UDP_PORT, msg)
         self._diag("expecting '%s'" % (expstr), logonly=True)
     
-        m = self._expect(expstr)
+        m = self._expect(expstr, timeout)
         if m:
             return m.group(2)
         else:
